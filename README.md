@@ -1,31 +1,38 @@
-Overview of Project ☁️
-The final project is to deploy a 'Bucket List Tracker' application on AWS Amplify. It will take longer than the others to build out, but by the end of it, you will learn a lot about how to create serverless applications.
+# Bucket List Tracker Application ☁️
 
-Steps to be performed 👩‍💻
-In the next few lessons, we'll be going through the following steps.
+A full-stack serverless application built with React and AWS Amplify that allows users to create, manage, and track their bucket list items with image uploads.
 
-Develop a bucket list tracker application in React
-Initialize a Github repository and connect it to your local repository. Host the frontend on Amplify Hosting
-Use Amplify Studio/ Amplify CLI and integrate Amplify Authentication providing user authentication for Login/Signup
-Create a AWS AppSync service for building and managing a GraphQL API, and a GraphQL schema for DynamoDB service integration
-Deploy the backend on AWS Amplify to handle data storage and server-side logic
-Services Used 🛠
-AWS Amplify: Deployment of frontend and backend services.
-AWS AppSync: Simplifies building and managing scalable GraphQL APIs.
-GraphQL API: Allows clients to request only the data they need. [API & Schema]
-DynamoDB: DynamoDB for storing and managing bucket list items.[Database]
-S3 bucket: For storage of user images. [Storage]
+## Overview
 
-## Architectural Diagram
+This project demonstrates how to build and deploy a complete serverless application on AWS Amplify. You'll learn how to create a React frontend, set up authentication, manage data storage, and handle file uploads—all using AWS cloud services.
+
+## Steps to be Performed 👩‍💻
+
+1. **Develop** a bucket list tracker application in React
+2. **Initialize** a GitHub repository and connect it to AWS Amplify Hosting
+3. **Integrate** Amplify Authentication for user Login/Signup
+4. **Create** AWS AppSync GraphQL API for DynamoDB integration
+5. **Deploy** backend services on AWS Amplify for data and storage management
+
+## Services Used 🛠
+
+- **AWS Amplify**: Frontend and backend deployment with CI/CD workflow
+-**: GraphQL API for seamless data operations
+- **Amazon Cognito**: User authentication and authorization
+- **Amazon DynamoDB**: NoSQL database for storing bucket list items
+- **Amazon S3**: Object storage for user-uploaded images
+
+## Architecture Diagram
 
 ![Architecture Diagram](Diagram.jpeg)
 
-AWS Amplify
-provides a Git-based CI/CD workflow that allows you to build, deploy, and host web applications or static sites with serverless backends.
-It automatically detects the build settings for both the frontend and any serverless backend resources when connected to a Git repository. With each code commit, Amplify redeploys updates automatically.
-In this section, you'll create a new React application for your bucket list tracker, push it to a GitHub repository, and connect it to AWS Amplify for deployment.
+---
 
-## Create a React App using Vite
+## Step 1: Create React Application with Vite
+
+AWS Amplify provides a Git-based CI/CD workflow that automatically builds and deploys your application. When connected to a Git repository, Amplify detects build settings and redeploys on every code commit.
+
+### 1.1 Initialize Vite React Project
 
 ```bash
 npm create vite@latest bucketlistapp -- --template react
@@ -34,68 +41,277 @@ npm install
 npm run dev
 ```
 
-Local development server runs at: http://localhost:5173/ (address may vary)
+Local development server runs at: **http://localhost:5173/**
 
 ![React App Screenshot](ReactAPP.jpeg)
 
-## Deploy the React App to AWS Amplify
-https://main.dfnnoiwwumul6.amplifyapp.com/ (address may vary)
+### 1.2 Deploy to AWS Amplify
 
-Setup AWS Amplify Backend
-With Amplify, you can set up authentication, data storage, and file storage with a unified developer experience, which will allow users to manage their bucket lists.
-1.authentication
-By default, your authentication resource is configured in the bucketlistapp/amplify/auth/resource.ts
-2.data storage
-update bucketlistapp/amplify/data/resource.ts file, which will define a model for the bucket list items, ensuring that only the owner can access their data.
-In this schema:
-Each bucket list item includes a title, description, and a completed status.
-The authorization rule ensures that only the user who created the item can access it.
-3.file storage
-Create a new folder called storage inside the bucketlistapp/amplify folder, and inside that, create a new file named resource.ts.
-This storage configuration ensures that only the person who uploads the image can access it. The entity_id will be replaced with the user’s identifier during file uploads, restricting access to the file.
-4.update amplify/backend.ts file 
-This ensures that all the backend resources (auth, data, and storage) are properly configured and linked.
-5.Deploy the Amplify Backend in a Cloud Sandbox
-This command starts a Cloud sandbox, which is an isolated development environment connected to AWS Cloud resources to rapidly build, test, and iterate
+1. Push your code to a GitHub repository
+2. Connect the repository to AWS Amplify Console
+3. Configure build settings (see `amplify.yml` configuration below)
+4. Deploy automatically on every push
+
+**Production URL**: `https://main.[app-id].amplifyapp.com/`
+
+#### Amplify Build Configuration (`amplify.yml`)
+
+```yaml
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - cd bucketlistapp
+        - npm ci
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: bucketlistapp/dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - bucketlistapp/node_modules/**/*
+```
+
+---
+
+## Step 2: Setup AWS Amplify Backend
+
+Configure authentication, data storage, and file storage for your bucket list application.
+
+### 2.1 Authentication
+
+Authentication is pre-configured in `bucketlistapp/amplify/auth/resource.ts`:
+
+```typescript
+import { defineAuth } from '@aws-amplify/backend';
+
+export const auth = defineAuth({
+  loginWith: {
+    email: true,
+  },
+});
+```
+
+### 2.2 Data Storage (DynamoDB)
+
+Update `bucketlistapp/amplify/data/resource.ts` to define the bucket list item model:
+
+```typescript
+import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
+
+const schema = a.schema({
+  BucketItem: a
+    .model({
+      title: a.string(),
+      description: a.string(),
+      image: a.string(),
+    })
+    .authorization((allow) => [allow.owner()]),
+});
+
+export type Schema = ClientSchema<typeof schema>;
+
+export const data = defineData({
+  schema,
+  authorizationModes: {
+    defaultAuthorizationMode: 'userPool',
+  },
+});
+```
+
+**Authorization**: Only the item owner can access their data.
+
+### 2.3 File Storage (S3)
+
+Create `bucketlistapp/amplify/storage/resource.ts`:
+
+```typescript
+import { defineStorage } from "@aws-amplify/backend";
+
+export const storage = defineStorage({
+  name: "amplifyBucketTrackerImages",
+  access: (allow) => ({
+    "media/{entity_id}/*": [
+      allow.entity("identity").to(["read", "write", "delete"]),
+    ],
+  }),
+});
+```
+
+**Access Control**: Only the user who uploads an image can access it.
+
+### 2.4 Backend Configuration
+
+Update `bucketlistapp/amplify/backend.ts` to link all resources:
+
+```typescript
+import { defineBackend } from '@aws-amplify/backend';
+import { auth } from './auth/resource';
+import { data } from './data/resource';
+import { storage } from './storage/resource';
+
+defineBackend({
+  auth,
+  data,
+  storage,
+});
+```
+
+### 2.5 Deploy Cloud Sandbox
+
+Deploy your backend to an isolated cloud development environment:
+
+```bash
 npx ampx sandbox
-When complete, you'll see: "Sandbox deployed successfully"
-The amplify_outputs.json file will appear in your bucketlistapp folder
-Keep the sandbox terminal running while developing
+```
 
-Connect Frontend and Backend
-In this task, you will build the frontend of your bucket list tracker app and connect it to the cloud backend you have already set up.
+**What happens:**
+- Deploys authentication, data, and storage to AWS Cloud
+- Generates `amplify_outputs.json` configuration file
+- Keeps resources synced with local changes
 
-You will use AWS Amplify’s UI component library to create a complete user authentication flow and implement the ability to create, update, and delete bucket list items.
+**Output:**
+- ✅ "Sabox deployed successfully"
+- 📄 `amplify_outputs.json` file created in `bucketlistapp/` folder
 
-Additionally, you will create the frontend of the bucket list tracker, where users can add, update, and delete items on their bucket list. They will also be able to upload images associated with each item.
-1.Install Amplify Libraries
+⚠️ **Keep the sandbox terminal running during development**
+
+![Deploy Sandbox Screenshot](DeploySandbox.jpeg)
+
+---
+
+## Step 3: Connect Frontend and Backend
+
+Build the UI and integrate with cloud services for authentication and data management.
+
+### 3.1 Install Amplify Libraries
+
+```bash
 npm install aws-amplify @aws-amplify/ui-react
-These libraries include the client-side APIs to connect your app's frontend to the backend services and the UI components for authentication.
+```
 
-2.UI Setup and Styling
-2.1update bucketlistapp/src/index.css
-This will set the layout and styles for the bucket list UI
-2.2update bucketlistapp/src/App.jsx
-This will set the content for the bucket list UI
+These libraries provide:
+- Client-side APIs for backend services
+- Pre-built authentication UI components
 
-3.Launch the App Locally
-3.1npm run dev
-3.2Open the local host link http://localhost:5173/ (address may vary)
-3.3Choose the Create Account tab and use the authentication flow to sign up by entering your email and password. Then, create your account.
+### 3.2 Update UI Components
 
-4.Test
-Bucket List Item: "Visit Paris"
-Description: "Rideau Canal"
-Upload an image (JPEG)
+**Update `bucketlistapp/src/index.css`**: Set layout and styles for the bucket list UI
 
-AWS workflow
-Step 1 - Database Storage (DynamoDB)
-Item metadata (title, description, image filename) saved to DynamoDB via AppSync GraphQL API
-Step 2 - File Storage (S3)
-Image uploaded to S3 bucket via Amplify Storage
-Path: media/{your-user-id}/{filename}
-Only you can access your images (owner authorization)
-Step 3 - Display
-App fetches your items from DynamoDB
-Generates secure URLs for images from S3
-Displays all your bucket list items with images
+**Update `bucketlistapp/src/App.jsx`**: Configure authentication and CRUD operations
+
+Key features in `App.jsx`:
+- `Amplify.configure(outputs)` - Connects to backend
+- `<Authenticator>` - Provides login/signup UI
+- CRUD operations via GraphQL client
+- Image upload/download from S3
+
+### 3.3h the App Locally
+
+```bash
+npm run dev
+```
+
+1. Open **http://localhost:5173/**
+2. Click **"Create Account"** tab
+3. Enter email and password
+4. Complete sign-up process
+
+---
+
+## Step 4: Test the Application
+
+### Add a Bucket List Item
+
+**Example:**
+- **Title**: "Visit Paris"
+- **Description**: "See the Eiffel Tower and walk along the Seine"
+- **Upload Image**: Paris.jpg
+
+![Test App Screenshot](TestApp.jpeg)
+
+### Behind the Scenes - AWS Workflow
+
+#### Step 1: Database Storage (DynamoDB)
+- Item metadata (title, description, image filename) saved via AppSync GraphQL API
+- Only accessible by the authenticated owner
+
+#### Step 2: File Storage (S3)
+- Image uploaded to S3 bucket via Amplify Storage
+- **Path**: `media/{your-user-id}/{filename}`
+- Access restricted to owner only
+
+#### Step 3: Display
+- App fetches items from DynamoDB
+- Generates secure pre-signed URLs for S3 images
+- Renders bucket list with images in the UI
+
+### CRUD Operations
+
+- ✅ **Create**: Add new bucket list items with images
+- 📖 **Read*iew all your bucket list items
+- 🗑️ **Delete**: Remove items from your list
+- 🔐 **Secure**: All data isolated per user
+
+---
+
+## Deployment Workflow
+
+### Local Development
+1. Run sandbox: `npx ampx sandbox` (keep running)
+2. Run dev server: `npm run dev` (in new terminal)
+3. Make changes and test locally
+
+### Production Deployment
+1. Commit changes: `git add . && git commit -m "message"`
+2. Push to GitHub: `git push`
+3. AWS Amplify automatically builds and deploys
+4. Monitor deployment in Amplify Console
+
+**No manual redeployment needed** - CI/CD handles everything automatically!
+
+---
+
+## Project Structure
+
+```
+AWS-Amplify-Serverless-Application/
+├── bucketlistapp/
+│   ├── amplify/
+│   │   ├── auth/resource.ts       # Authentication config
+│   │   ├── data/resource.ts       # DynamoDB schema
+│   │   ├── storage/resource.ts    # S3 storage config
+│   │   └── backend.ts             # Backend integration
+│   ├── src/
+│   │   ├── Appyles
+│   ├── amplify_outputs.json       # Backend configuration (generated)
+│   └── package.json
+├── Diagram.jpeg                   # Architecture diagram
+├── ReactAPP.jpeg                  # React app screenshot
+├── DeploySandbox.jpeg             # Sandbox deployment
+├── TestApp.jpeg                   # Application testing
+└── README.md
+```
+
+---
+
+## Key Takeaways
+
+✅ **Serverless Architecture**: No server management required  
+✅ **Automatic Scaling**: AWS handles traffic increases  
+✅ **Secure by Default**: User isolation and authentication built-in  
+✅ **CI/CD Pipeline**: Automatic deployments on code push  
+✅ **Full-Stack Solution**: Frontend, backend, auth, and storage integrated seamlessly
+
+---
+
+## Resources
+
+- [AWS Amplify Documentation](https://docs.amplify.aws/)
+- [AWS AppSync Documentation](https://docs.aws.amazon.com/appsync/)
+- [Vite Documentation](https://vitejs.dev/)
+- [React Documentation](https://react.dev/)
