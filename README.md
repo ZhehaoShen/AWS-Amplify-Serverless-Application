@@ -41,7 +41,7 @@ npm install
 npm run dev
 ```
 
-Local development server runs at: **http://localhost:5173/**
+Local development server runs at: http://localhost:5173/
 
 ![React App Screenshot](ReactAPP.jpeg)
 
@@ -52,7 +52,7 @@ Local development server runs at: **http://localhost:5173/**
 3. Configure build settings (see `amplify.yml` configuration below)
 4. Deploy automatically on every push
 
-**Production URL**: `https://main.dfnnoiwwumul6.amplifyapp.com/`
+**Production URL**: **https://main.dfnnoiwwumul6.amplifyapp.com/**
 
 #### Amplify Build Configuration (`amplify.yml`)
 
