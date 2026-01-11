@@ -1,0 +1,17 @@
+version: 1
+frontend:
+  phases:
+    preBuild:
+      commands:
+        - cd bucketlistapp
+        - npm ci
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: bucketlistapp/dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - bucketlistapp/node_modules/**/*
